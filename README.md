@@ -395,6 +395,38 @@
     const ADMIN_PASS = "1234";
     let currentUser = null; 
 
+    // --- وظائف الرفع والتشغيل التلقائي ---
+    window.onload = function() {
+        const savedConfig = JSON.parse(localStorage.getItem('pos_config'));
+        if (savedConfig) {
+            if(document.getElementById('tg-token')) document.getElementById('tg-token').value = savedConfig.tgToken || "";
+            if(document.getElementById('tg-chatid')) document.getElementById('tg-chatid').value = savedConfig.tgChat || "";
+            if(document.getElementById('wa-channel-link')) document.getElementById('wa-channel-link').value = savedConfig.waLink || "";
+        }
+        const loggedInUser = sessionStorage.getItem('current_user');
+        if (loggedInUser) {
+            loginSuccess(JSON.parse(loggedInUser));
+        }
+        checkStockAlerts();
+    };
+
+    function checkStockAlerts() {
+        const notifList = document.getElementById('notif-list-container');
+        const notifDot = document.getElementById('global-notif-dot');
+        let lowStockItems = inventory.filter(item => item.qty <= 5);
+        if (lowStockItems.length > 0) {
+            if(notifDot) notifDot.style.display = 'block';
+            if(notifList) {
+                notifList.innerHTML = "";
+                lowStockItems.forEach(item => {
+                    notifList.innerHTML += `<div class="notif-item notif-warning"><i class="fas fa-exclamation-triangle"></i><div><strong>تنبيه نفاذ:</strong> (${item.name}) المتبقي ${item.qty}</div></div>`;
+                });
+            }
+        } else {
+            if(notifDot) notifDot.style.display = 'none';
+        }
+    }
+
     // --- نظام تسجيل الدخول ---
     function handleLogin() {
         const user = document.getElementById('login-user').value;
@@ -415,6 +447,7 @@
 
     function loginSuccess(userData) {
         currentUser = userData;
+        sessionStorage.setItem('current_user', JSON.stringify(userData));
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('sidebar-user-login').innerHTML = `<i class="fas fa-user-circle"></i> ${userData.name}`;
         applyPermissions(userData.role);
@@ -423,24 +456,32 @@
 
     function applyPermissions(role) {
         const ids = ['card-purchases', 'card-sales', 'card-reports', 'card-inventory', 'card-accounts', 'card-subscriptions', 'card-store', 'card-expenses'];
-        ids.forEach(id => document.getElementById(id).style.display = "flex"); 
+        ids.forEach(id => {
+            let el = document.getElementById(id);
+            if(el) el.style.display = "flex";
+        }); 
 
         if (role === "مبيعات فقط") {
-            ['card-purchases', 'card-inventory', 'card-accounts', 'card-store', 'card-reports'].forEach(id => document.getElementById(id).style.display = "none");
-            document.getElementById('side-staff-link').style.display = "none";
+            ['card-purchases', 'card-inventory', 'card-accounts', 'card-store', 'card-reports'].forEach(id => {
+                 let el = document.getElementById(id); if(el) el.style.display = "none";
+            });
+            if(document.getElementById('side-staff-link')) document.getElementById('side-staff-link').style.display = "none";
         } else if (role === "مخزن فقط") {
-            ['card-sales', 'card-accounts', 'card-store', 'card-expenses'].forEach(id => document.getElementById(id).style.display = "none");
-            document.getElementById('side-staff-link').style.display = "none";
+            ['card-sales', 'card-accounts', 'card-store', 'card-expenses'].forEach(id => {
+                let el = document.getElementById(id); if(el) el.style.display = "none";
+            });
+            if(document.getElementById('side-staff-link')) document.getElementById('side-staff-link').style.display = "none";
         }
     } 
 
-    function logout() { location.reload(); } 
+    function logout() { sessionStorage.removeItem('current_user'); location.reload(); } 
 
     function initializeDashboard() {
         if (!currentUser) return;
         showSection('home-screen');
         if(document.getElementById('exp-date')) document.getElementById('exp-date').valueAsDate = new Date();
         renderStaff();
+        checkStockAlerts();
     } 
 
     function toggleSidebar() {
@@ -535,7 +576,9 @@
             else { inventory.push({barcode: item.barcode, name: item.name, qty: item.qty, cost: item.price, price: item.sellPrice}); }
         });
         localStorage.setItem('pos_inventory', JSON.stringify(inventory));
-        tempPurchases = []; alert("تم الحفظ"); showSection('home-screen');
+        tempPurchases = []; alert("تم الحفظ"); 
+        checkStockAlerts();
+        showSection('home-screen');
     }
 
     // --- المبيعات ---
@@ -578,6 +621,7 @@
         tempSales = []; 
         document.getElementById('sales-total-text').innerText = "المبلغ الكلي: 0 د.ع";
         alert("تم حفظ عملية البيع بنجاح"); 
+        checkStockAlerts();
         showSection('home-screen');
     }
 
@@ -691,6 +735,7 @@
         inventory[currentEditIdx].price = parseFloat(document.getElementById('edit-item-price').value);
         localStorage.setItem('pos_inventory', JSON.stringify(inventory));
         renderInventory();
+        checkStockAlerts();
         closeEditModal();
     }
     
@@ -726,7 +771,7 @@
     function saveLinkSettings() {
         const config = { tgToken: document.getElementById('tg-token').value, tgChat: document.getElementById('tg-chatid').value, waLink: document.getElementById('wa-channel-link').value };
         localStorage.setItem('pos_config', JSON.stringify(config));
-        alert("تم حفظ الإعدادات");
+        alert("تم حفظ الإعدادات بنجاح");
     }
 
 </script>
