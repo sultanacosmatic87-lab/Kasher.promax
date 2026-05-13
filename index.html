@@ -782,6 +782,15 @@
 
         if (!name || isNaN(qty) || isNaN(cost) || isNaN(price)) return alert("يرجى ملء بيانات المادة كاملة");
 
+        // --- التنبيه عند تكرار الباركود المسجل مسبقاً ---
+        if (barcode !== "") {
+            const existsInInventory = inventory.find(i => i.barcode === barcode);
+            if (existsInInventory) {
+                const confirmAdd = confirm(`⚠️ تنبيه: هذا الباركود (${barcode}) مسجل مسبقاً باسم [ ${existsInInventory.name} ] في المخزن.\n\nهل تريد الاستمرار وإضافة هذه الكمية للمادة السابقة؟`);
+                if (!confirmAdd) return; 
+            }
+        }
+
         let existingIndex = tempPurchases.findIndex(item => 
             (barcode !== "" && item.barcode === barcode) || 
             (code !== "" && item.code === code) ||
@@ -906,7 +915,6 @@
         window.scrollTo(0,0); 
     }
 
-    // تعديل النواقص لتظهر إذا كانت الكمية 2 أو أقل
     function renderOutOfStock() {
         const container = document.getElementById('out-of-stock-list');
         if (!container) return;
@@ -924,7 +932,6 @@
         });
     }
 
-    // تعديل نظام التنبيهات (الجرس)
     function checkNotifications() {
         const notifDot = document.getElementById('global-notif-dot');
         const container = document.getElementById('notif-list-container');
@@ -1060,7 +1067,6 @@
     function toggleAuthMode(isReg) { document.getElementById('login-form').style.display=isReg?'none':'block'; document.getElementById('register-form').style.display=isReg?'block':'none'; }
     function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); const o = document.getElementById('overlay'); o.style.display = (o.style.display==='block')?'none':'block'; }
     
-    // تحديث الإحصائيات مع تنبيه الجرس
     function updateQuickStats() { 
         const today = new Date().toLocaleDateString('ar-EG'); 
         const sales = salesInvoices.filter(inv => inv.date.includes(today)).reduce((s, i) => s + i.total, 0); 
